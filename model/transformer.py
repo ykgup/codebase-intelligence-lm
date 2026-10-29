@@ -5,7 +5,7 @@ import torch.nn as nn
 class TinyTransformer(nn.Module):
     def __init__(
         self,
-        vocab_size=128,
+        vocab_size,
         embedding_dim=64,
         num_heads=4,
         num_layers=2,
@@ -13,13 +13,25 @@ class TinyTransformer(nn.Module):
     ):
         super().__init__()
 
-        self.token_embedding = nn.Embedding(vocab_size, embedding_dim)
-        self.position_embedding = nn.Embedding(max_length, embedding_dim)
+        if embedding_dim % num_heads != 0:
+            raise ValueError(
+                "embedding_dim must be divisible by num_heads"
+            )
+
+        self.vocab_size = vocab_size
+        self.max_length = max_length
+
+        self.token_embedding = nn.Embedding(
+            vocab_size, embedding_dim
+        )
+        self.position_embedding = nn.Embedding(
+            max_length, embedding_dim
+        )
 
         layer = nn.TransformerEncoderLayer(
             d_model=embedding_dim,
             nhead=num_heads,
-            dim_feedforward=256,
+            dim_feedforward=embedding_dim * 4,
             batch_first=True,
         )
 
@@ -29,20 +41,26 @@ class TinyTransformer(nn.Module):
         )
 
         self.output = nn.Linear(embedding_dim, vocab_size)
-        self.max_length = max_length
 
     def forward(self, token_ids):
         batch_size, sequence_length = token_ids.shape
 
+        if sequence_length > self.max_length:
+            raise ValueError(
+                f"Sequence length {sequence_length} exceeds "
+                f"maximum {self.max_length}"
+            )
+
         positions = torch.arange(
-            sequence_length, device=token_ids.device
+            sequence_length,
+            device=token_ids.device,
         )
 
         x = self.token_embedding(token_ids)
         x = x + self.position_embedding(positions)
 
-        # Prevent each position from seeing future tokens.
-        mask = torch.triu(
+        # True means a position cannot attend to that future position.
+        causal_mask = torch.triu(
             torch.ones(
                 sequence_length,
                 sequence_length,
@@ -52,5 +70,5 @@ class TinyTransformer(nn.Module):
             diagonal=1,
         )
 
-        x = self.transformer(x, mask=mask)
+        x = self.transformer(x, mask=causal_mask)
         return self.output(x)
