@@ -13,15 +13,15 @@ from model.transformer import TinyTransformer
 
 # Project paths
 DATA_DIR = ROOT / "data" / "processed"
-TOKENIZER_PATH = ROOT / "data" / "tokenizer.json"
+TOKENIZER_PATH = ROOT / "data" / "tokenizer_codesearchnet.json"
 CHECKPOINT_DIR = ROOT / "checkpoints"
 
 # Training settings
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 BLOCK_SIZE = 64
-STEPS = 300
+STEPS = 2000
 LEARNING_RATE = 0.001
-EVAL_INTERVAL = 50
+EVAL_INTERVAL = 200
 
 torch.manual_seed(42)
 
@@ -53,7 +53,7 @@ def main():
         if not path.exists():
             raise FileNotFoundError(
                 f"Dataset file not found: {path}\n"
-                "Run: python data/prepare_dataset.py"
+                "Run: python data/prepare_codesearchnet.py"
             )
 
         text = path.read_text(encoding="utf-8")
@@ -184,13 +184,14 @@ def main():
 
     # Save weights and the configuration needed to reload the model.
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
-    checkpoint_path = CHECKPOINT_DIR / "code_model.pt"
+    checkpoint_path = CHECKPOINT_DIR / "code_model_codesearchnet.pt"
 
     torch.save(
         {
             "model_state_dict": model.state_dict(),
             "vocab_size": vocab_size,
             "block_size": block_size,
+            "tokenizer_path": str(TOKENIZER_PATH),
             "model_config": {
                 "embedding_dim": 64,
                 "num_heads": 4,

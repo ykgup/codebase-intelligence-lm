@@ -4,7 +4,7 @@ from tokenizers import Tokenizer, models, trainers, pre_tokenizers, decoders
 
 
 DATA_DIR = Path(__file__).resolve().parent / "processed"
-TOKENIZER_PATH = Path(__file__).resolve().parent / "tokenizer.json"
+TOKENIZER_PATH = Path(__file__).resolve().parent / "tokenizer_codesearchnet.json"
 
 
 def main():
