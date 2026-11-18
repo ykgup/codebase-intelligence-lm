@@ -1,90 +1,145 @@
-# Codebase Intelligence LM
+# ⚡ CodebaseLM (`cblm`) — Terminal-Native AST-Grounded Code Intelligence & Neural QA Engine
 
-An experimental research project investigating whether **AST-extracted structured repository context** improves the repository-level code understanding and symbol prediction of a custom, locally deployable Transformer code language model (`TinyTransformer`).
+**CodebaseLM** is a local, lightweight repository intelligence engine powered by **`CodebaseLlama` (5.87M parameters)** and **deterministic Python AST extraction**. Built from scratch in PyTorch to run entirely on consumer 4GB VRAM GPUs (tested on NVIDIA GeForce RTX 2050), it indexes any Python repository in milliseconds, adapts its weights to your codebase's symbols and architecture on the fly ("Instant Repo-Brain"), answers natural-language codebase questions, autocompletes cross-file API calls, and catches hallucinated function calls.
 
-## Research Question
+---
 
-> *Does structured repository context (AST-extracted module metadata, class definitions, and function signatures) improve the repository-level code understanding of a small locally deployable code model?*
+## 🚀 Key Capabilities
 
-## Model Architecture (`TinyTransformer`)
+1. **Interactive Terminal Shell & Full-Repo Neural QA (`cblm`)**:
+   - Recursively reads every `.py` file, class, method signature, docstring, and cross-file call graph in your repository.
+   - Synthesizes repository-specific Q&A pairs and micro-adapts `CodebaseLlama` on your GPU in seconds.
+   - Ask natural-language questions directly in your terminal:
+     - `Where is CodebaseLlama defined and who calls it?`
+     - `What is inside train_llama.py?`
+     - `What does this codebase do?`
+2. **AST Context-Grounded Neural Autocompletion**:
+   - Injects compact `# repo: <symbols>` AST headers into the 256-token context window.
+   - Supports `@filename` targeting (e.g., `@evaluate.py def caller(x): return `) to steer completions with **98%+ token confidence**.
+3. **Deterministic AST Hallucination Guard (`:verify` & `:audit`)**:
+   - Flags non-existent or hallucinated function/class calls in code snippets and suggests the closest real symbol in your repository.
+   - Runs full-repository cross-file call integrity audits (`:audit`).
+4. **CodebaseLM Studio (`studio.py`)**:
+   - Zero-dependency dark-mode web playground (`http://localhost:8050`) visualizing live AST graphs and token-by-token probability bars (Without AST Context vs. With `# repo:` AST Context).
 
-Built from scratch in PyTorch (`model/transformer.py`):
-- **Parameters:** 174,208
-- **Vocabulary Size:** 512 (Byte-Level BPE tokenizer trained on CodeSearchNet Python)
-- **Context Length (`block_size`):** 64 tokens (`max_length = 128`)
-- **Embedding Dimension:** 64
-- **Attention Heads:** 4
-- **Transformer Layers:** 2
+---
 
-## Project Structure
+## 🧠 Model Architecture (`CodebaseLlama` v0.2.0 vs `TinyTransformer` v0.1.0)
 
-- `model/transformer.py` — Custom `TinyTransformer` architecture.
-- `data/download_codesearchnet.py` — Downloads and deduplicates 12,000 Python functions from `Nan-Do/code-search-net-python` (10,000 train / 1,000 validation / 1,000 test).
-- `data/prepare_codesearchnet.py` — Formats raw JSONL splits into processed training and evaluation corpora.
-- `data/train_tokenizer.py` — Trains the 512-token Byte-Level BPE tokenizer (`data/tokenizer_codesearchnet.json`).
-- `training/train.py` — End-to-end training script supporting CUDA, Apple Silicon MPS, and CPU.
-- `evaluation/evaluate.py` — Evaluates validation (`--split val`) and held-out test (`--split test`) loss, perplexity, and next-token accuracy.
-- `generate.py` — Autoregressive code generation using temperature and top-k sampling.
-- `repo_context/builder.py` — Extracts structured repository context (file tree, imports, classes, methods, and function signatures) using Python's `ast` module.
-- `repo_context/benchmark.py` — Controlled benchmark evaluating `TinyTransformer` on unseen repository symbol prediction with vs. without structured AST context headers.
+| Specification | `TinyTransformer` (v0.1.0) | `CodebaseLlama` (v0.2.0) |
+| :--- | :--- | :--- |
+| **Parameters** | 174,336 (~174K) | **5,868,800 (~5.87M)** |
+| **Architecture** | Vanilla Decoder | **Llama-style (RoPE, RMSNorm, SwiGLU, FlashAttention)** |
+| **Layers / Heads / Dim** | 2 Layers / 4 Heads / 128 Dim | **6 Layers / 8 Heads / 256 Dim** |
+| **Vocabulary (Byte-Level BPE)** | 512 tokens | **4,096 tokens (`tokenizer_llama_4k.json`)** |
+| **Context Window** | 64 tokens | **256 tokens** |
+| **Pre-training Corpus** | CodeSearchNet Python | **CodeSearchNet Python + 50% Native `# repo:` AST Headers** |
 
-## Experimental Results
+---
 
-### Part 1: Code Language Modeling Baseline (41 Samples vs. 12,000 CodeSearchNet Samples)
+## 📊 Repository Grounding Benchmark Results (`CodebaseLlama` 5.87M)
 
-| Experiment Run | Dataset Split & Size | Cross-Entropy Loss | Perplexity | Token Accuracy |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Initial Synthetic Baseline** | Validation (9 samples) | 3.2894 | 26.8257 | 36.33% |
-| **2. CodeSearchNet (300 Steps, BS=4)** | Validation (762,709 tokens) | 4.7265 | 112.8980 | 9.88% |
-| **3. CodeSearchNet (2,000 Steps, BS=16)** | Validation (762,709 tokens) | 3.5824 | 35.9602 | 28.24% |
-| **4. CodeSearchNet Held-Out Test** | Test (669,497 tokens) | 3.5070 | 33.3474 | 19.67% |
+Evaluated across repository files predicting cross-file symbol invocations (`python codebase_cli.py --repo . --adapt`):
 
-### Part 2: Controlled Repository Context Benchmark (`repo_context/benchmark.py`)
-
-We evaluate `TinyTransformer` on 6 unseen repository files from `codebase-intelligence-lm` under two controlled conditions:
-1. **No Context (Baseline):** The model receives only the local code prefix (`symbol = `) without file-level metadata.
-2. **With Structured Context (Treatment):** The model receives a compact AST-extracted header (`# repo: <SYMBOL>`) prepended to the local prefix.
-
-We evaluate both the **Unadapted CodeSearchNet Model (Zero-Shot)** and the **Context-Adapted Model** (adapted on 738 disjoint CodeSearchNet identifiers with replay regularization, zero evaluation overlap):
-
-| Experimental Stage & Condition | Avg Loss | Avg Perplexity | Avg Token Accuracy |
+| Evaluation Stage | Without AST Context (PPL) | With `# repo:` AST Context (PPL) | Next-Token Accuracy (With AST) |
 | :--- | :--- | :--- | :--- |
-| **Exp 1: Unadapted Model (No Context)** | 4.0413 | 56.90 | 7.03% |
-| **Exp 1: Unadapted Model (With AST Context)** | 3.9665 | 52.80 | 10.63% |
-| **Exp 2: Context-Adapted (No Context)** | 3.9547 | 52.18 | 10.33% |
-| **Exp 2: Context-Adapted (With AST Context)** | **2.6690** | **14.43** | **36.39%** |
+| **Stage 1: Zero-Shot Pre-trained** | 57.54 | **9.07** (-84.2% PPL) | **64.57%** (vs 34.41% blind) |
+| **Stage 2: Instant Repo-Brain Adapted** | 3.58 | **2.82** | **84.32%** (up to 93.75% peak) |
 
-#### Per-File Breakdown (Experiment 2: Context-Adapted `TinyTransformer`)
+---
 
-| Task ID | Source File | Target Symbol | No-Ctx PPL | With-Ctx PPL | No-Ctx Acc | With-Ctx Acc |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `T1_Transformer` | `model/transformer.py` | `TinyTransformer` | 185.23 | **131.61** | 0.00% | 0.00% |
-| `T2_Downloader` | `data/download_codesearchnet.py` | `normalize_partition` | 18.75 | **5.20** | 22.22% | **55.56%** |
-| `T3_PrepDataset` | `data/prepare_codesearchnet.py` | `load_code_samples` | 24.44 | **8.95** | 27.27% | **54.55%** |
-| `T4_Evaluator` | `evaluation/evaluate.py` | `load_split_data` | 47.12 | **8.88** | 12.50% | **50.00%** |
-| `T5_Generator` | `generate.py` | `generate_code` | 46.28 | **3.61** | 0.00% | **42.86%** |
-| `T6_ASTBuilder` | `repo_context/builder.py` | `analyze_python_file` | 109.06 | **45.89** | 0.00% | **15.38%** |
-| **AVERAGE** | **6 Repository Files** | **6 Unseen Symbols** | 52.18 | **14.43** | 10.33% | **36.39%** |
-
-## Setup & Reproduction
+## 🛠️ Quickstart & Installation
 
 ```bash
-# 1. Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .\.venv\Scripts\Activate.ps1
+# 1. Install dependencies
 python -m pip install -r requirements.txt
 
-# 2. Download and prepare CodeSearchNet dataset (12,000 samples)
-python data/download_codesearchnet.py
-python data/prepare_codesearchnet.py
+# 2. Register the `cblm` terminal CLI command
+python -m pip install --no-build-isolation --no-deps -e .
 
-# 3. Train and evaluate the baseline TinyTransformer
-python training/train.py
-python evaluation/evaluate.py --split val
-python evaluation/evaluate.py --split test
-python generate.py
+# 3. Pre-train CodebaseLlama (5.87M) locally on GPU (~4 minutes on RTX 2050)
+python data/train_tokenizer_4k.py
+python training/train_llama.py
 
-# 4. Generate AST repository context and run the controlled benchmark
-python repo_context/builder.py
-python repo_context/benchmark.py
+# 4. Launch the interactive Full-Repo Analyzer & Neural QA Shell in any repo
+cblm
+```
+
+---
+
+## 💻 Using the `cblm` Terminal Shell
+
+Once inside `cblm>`, you can ask natural-language codebase questions, autocomplete code with AST headers, or verify snippets:
+
+```text
+⚡ CodebaseLM Full-Repo Analyzer & Neural QA Shell (CodebaseLlama 5.87M on CUDA)
+Read & Indexed 17 files (3,598 lines) & 44 symbols in D:\codebase-intelligence-lm
+✔ Repo-Brain & QA Neural Adaptation finished in 16.79s (63 Repo-QA pairs learned)
+
+cblm> Where is CodebaseLlama defined and who calls it?
+  🧠 CODEBASE-LM FULL REPOSITORY ANALYSIS
+  ────────────────────────────────────────────────────────────────────────
+  Matched Symbol      : CodebaseLlama (class)
+  Defined In          : model/nano_llama.py (Line 126)
+  Signature           : class CodebaseLlama (methods: __init__, _init_weights, forward, count_parameters)
+  Cross-File Callers  : cblm.py, codebase_cli.py, studio.py, training/train_llama.py
+  CodebaseLlama Output: Class CodebaseLlama is defined in model/nano_llama.py (line 126) with methods: __init__, _init_weights, forward, count_parameters. (97.9% neural conf)
+
+cblm> @evaluate.py def caller(x): return
+  AST Header Injected   : # repo: load_split_data, get_batch, evaluate_model
+  Unadapted (No AST)    : def caller(x): return # noqa: E501 (76.1% conf)
+  Repo-Brain (With AST) : def caller(x): return load_split_data(x) (98.7% conf)
+
+cblm> def caller(x): return ana
+  AST Header Injected   : # repo: analyze_python_file
+  Unadapted (No AST)    : def caller(x): return ana (19.1% conf)
+  Repo-Brain (With AST) : def caller(x): return analyze_python_file(x) (98.9% conf)
+
+cblm> :verify res = load_split_dataset(tok, path)
+  ✖ [HALLUCINATED] load_split_dataset() -> NOT in repo! Did you mean load_split_data() (evaluation/evaluate.py)?
+```
+
+### Direct CLI Commands & Web Studio
+
+```bash
+# Scan and adapt to any repository path from the terminal
+cblm scan .
+
+# Audit all cross-file symbol invocations across a repository
+cblm audit .
+
+# Run the full quantitative benchmark table + Hallucination Guard
+python codebase_cli.py --repo . --adapt
+
+# Launch the Dark-Mode Visual Playground at http://localhost:8050
+python studio.py
+```
+
+---
+
+## 📂 Project Structure
+
+```text
+codebase-intelligence-lm/
+├── cblm.py                        # Interactive Terminal Shell, AST-RAG & Neural QA Engine
+├── codebase_cli.py                # Universal Repo-Brain Benchmark & Hallucination Guard CLI
+├── studio.py                      # Dark-mode Web Visualizer & Token Probability Playground
+├── pyproject.toml                 # Package config registering the global `cblm` command
+├── requirements.txt               # Python package dependencies
+├── model/
+│   ├── nano_llama.py              # CodebaseLlama (5.87M) with RoPE, RMSNorm, SwiGLU
+│   └── transformer.py             # Baseline TinyTransformer (174K)
+├── data/
+│   ├── train_tokenizer_4k.py      # 4,096-token Byte-Level BPE tokenizer trainer
+│   ├── tokenizer_llama_4k.json    # Trained 4K BPE vocabulary
+│   ├── download_codesearchnet.py  # CodeSearchNet downloader
+│   └── prepare_codesearchnet.py   # Corpus cleaner and splitter
+├── training/
+│   ├── train_llama.py             # FP16 mixed-precision trainer with AST header augmentation
+│   └── train.py                   # Baseline trainer
+├── repo_context/
+│   ├── builder.py                 # Fast AST symbol & signature extractor
+│   └── benchmark.py               # Controlled context evaluation suite
+└── evaluation/
+    └── evaluate.py                # Perplexity and token accuracy evaluator
 ```

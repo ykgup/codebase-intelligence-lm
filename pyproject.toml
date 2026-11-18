@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codebase-lm"
+version = "0.2.0"
+description = "Terminal-native AST-grounded neural code engine powered by CodebaseLlama (5.87M)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "numpy",
+    "tokenizers",
+    "datasets",
+]
+
+[project.scripts]
+cblm = "cblm:main"
+
+[tool.setuptools]
+py-modules = ["cblm", "codebase_cli", "generate"]
