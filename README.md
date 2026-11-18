@@ -19,8 +19,6 @@
 3. **Deterministic AST Hallucination Guard (`:verify` & `:audit`)**:
    - Flags non-existent or hallucinated function/class calls in code snippets and suggests the closest real symbol in your repository.
    - Runs full-repository cross-file call integrity audits (`:audit`).
-4. **CodebaseLM Studio (`studio.py`)**:
-   - Zero-dependency dark-mode web playground (`http://localhost:8050`) visualizing live AST graphs and token-by-token probability bars (Without AST Context vs. With `# repo:` AST Context).
 
 ---
 
