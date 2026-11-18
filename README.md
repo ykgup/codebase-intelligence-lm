@@ -1,10 +1,10 @@
-# ⚡ CodebaseLM (`cblm`) — Terminal-Native AST-Grounded Code Intelligence & Neural QA Engine
+# CodebaseLM (`cblm`) — Terminal-Native AST-Grounded Code Intelligence & Neural QA Engine
 
 **CodebaseLM** is a local, lightweight repository intelligence engine powered by **`CodebaseLlama` (5.87M parameters)** and **deterministic Python AST extraction**. Built from scratch in PyTorch to run entirely on consumer 4GB VRAM GPUs (tested on NVIDIA GeForce RTX 2050), it indexes any Python repository in milliseconds, adapts its weights to your codebase's symbols and architecture on the fly ("Instant Repo-Brain"), answers natural-language codebase questions, autocompletes cross-file API calls, and catches hallucinated function calls.
 
 ---
 
-## 🚀 Key Capabilities
+## Key Capabilities
 
 1. **Interactive Terminal Shell & Full-Repo Neural QA (`cblm`)**:
    - Recursively reads every `.py` file, class, method signature, docstring, and cross-file call graph in your repository.
@@ -24,7 +24,7 @@
 
 ---
 
-## 🧠 Model Architecture (`CodebaseLlama` v0.2.0 vs `TinyTransformer` v0.1.0)
+## Model Architecture (`CodebaseLlama` v0.2.0 vs `TinyTransformer` v0.1.0)
 
 | Specification | `TinyTransformer` (v0.1.0) | `CodebaseLlama` (v0.2.0) |
 | :--- | :--- | :--- |
