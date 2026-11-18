@@ -99,7 +99,7 @@ cblm> :verify res = load_split_dataset(tok, path)
   ✖ [HALLUCINATED] load_split_dataset() -> NOT in repo! Did you mean load_split_data() (evaluation/evaluate.py)?
 ```
 
-### Direct CLI Commands & Web Studio
+### Direct CLI Commands
 
 ```bash
 # Scan and adapt to any repository path from the terminal
@@ -110,9 +110,6 @@ cblm audit .
 
 # Run the full quantitative benchmark table + Hallucination Guard
 python codebase_cli.py --repo . --adapt
-
-# Launch the Dark-Mode Visual Playground at http://localhost:8050
-python studio.py
 ```
 
 ---
