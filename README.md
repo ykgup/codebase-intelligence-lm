@@ -67,38 +67,6 @@ cblm
 
 ---
 
-## 💻 Using the `cblm` Terminal Shell
-
-Once inside `cblm>`, you can ask natural-language codebase questions, autocomplete code with AST headers, or verify snippets:
-
-```text
-⚡ CodebaseLM Full-Repo Analyzer & Neural QA Shell (CodebaseLlama 5.87M on CUDA)
-Read & Indexed 17 files (3,598 lines) & 44 symbols in D:\codebase-intelligence-lm
-✔ Repo-Brain & QA Neural Adaptation finished in 16.79s (63 Repo-QA pairs learned)
-
-cblm> Where is CodebaseLlama defined and who calls it?
-  🧠 CODEBASE-LM FULL REPOSITORY ANALYSIS
-  ────────────────────────────────────────────────────────────────────────
-  Matched Symbol      : CodebaseLlama (class)
-  Defined In          : model/nano_llama.py (Line 126)
-  Signature           : class CodebaseLlama (methods: __init__, _init_weights, forward, count_parameters)
-  Cross-File Callers  : cblm.py, codebase_cli.py, studio.py, training/train_llama.py
-  CodebaseLlama Output: Class CodebaseLlama is defined in model/nano_llama.py (line 126) with methods: __init__, _init_weights, forward, count_parameters. (97.9% neural conf)
-
-cblm> @evaluate.py def caller(x): return
-  AST Header Injected   : # repo: load_split_data, get_batch, evaluate_model
-  Unadapted (No AST)    : def caller(x): return # noqa: E501 (76.1% conf)
-  Repo-Brain (With AST) : def caller(x): return load_split_data(x) (98.7% conf)
-
-cblm> def caller(x): return ana
-  AST Header Injected   : # repo: analyze_python_file
-  Unadapted (No AST)    : def caller(x): return ana (19.1% conf)
-  Repo-Brain (With AST) : def caller(x): return analyze_python_file(x) (98.9% conf)
-
-cblm> :verify res = load_split_dataset(tok, path)
-  ✖ [HALLUCINATED] load_split_dataset() -> NOT in repo! Did you mean load_split_data() (evaluation/evaluate.py)?
-```
-
 ### Direct CLI Commands
 
 ```bash
